@@ -1,0 +1,123 @@
+import numpy as np
+from sympy import *
+from random import randint
+
+#Here we consider quivers as nxn skew-symmetric matrices where the entries e_ij correspond to the number of edges going from vertex i into vertex j, with the number considered negative if the direction is reversed. Mutation is described on quivers in this manner in equation (1.1) at the bottom of the first page on Zickert's notes on Cluster Algebras.
+
+
+
+def mutation(vertex,quiver):
+#Function that mutates a given quiver at the given vertex
+  for i in range(len(quiver)):
+    for j in range(len(quiver)):
+      
+      #Piecewise function as described in equation (1.1)
+      if vertex == i or vertex == j:
+        quiver[i][j]=-quiver[i][j]
+
+      elif quiver[i][vertex]*quiver[vertex][j]<=0:
+        quiver[i][j]=quiver[i][j]
+
+      else:
+        quiver[i][j]=quiver[i][j]+abs(quiver[i][vertex])*quiver[vertex][j]
+
+  return quiver
+
+def coordinates(mutations,quiver,vars=0):
+  #This function returns a tuple of all A_coords and X_coords. Mutations are a list of vertices at which this function will perform mutations on the given quiver. The quiver's vertices are labeled by the variables in vars, which will be x0,...x(n-1) by default.
+  
+  #Currently there is nothing that differentiates between mutable and non-mutable vertices, and instead this differentiation is expected to be accounted for by the list of mutations inputed into the function.
+
+  #all_quivers=[quiver]
+
+  #Sets variables if none given
+  if vars==0:
+    vars=['x{0}'.format(i) for i in range(len(quiver))]
+  
+  #turns variables in symbols to be used by Sympy
+  vertices=[Symbol(vars[v]) for v in range(len(quiver))]
+
+  #Set of all A-coordinates, starts with all the vertices.
+  A_coords={vertex for vertex in vertices}
+
+  #Set of all X-coordinates. This block of code is designed to give all the X_coords generated from the first quiver. 
+  #I think this should be edited so that it only affects mutable vertices, but I'm not sure.
+  X_coords=set()
+  product_in=1
+  product_out=1
+  for k in range(len(quiver)):
+    for i in range(len(quiver)):
+      if quiver[i][k]>0:
+        product_in*=quiver[i][k]*vertices[i]
+      elif quiver[i][k]<0:
+        product_out*=quiver[i][k]*vertices[i]*(-1)
+      X_coords.add(product_out/product_in)
+
+  
+  #Performs the mutations.
+  for k in mutations:
+
+    #Mutates the quiver
+    quiver=mutation(k,quiver)
+
+    #Mutates the associated vertex
+    product_in=1
+    product_out=1
+    for i in range(len(quiver)):
+      if quiver[i][k]>0:
+        product_in*=quiver[i][k]*vertices[i]
+      elif quiver[i][k]<0:
+        product_out*=quiver[i][k]*vertices[i]*(-1)
+
+    vertices[k]=(vertices[k]**(-1))*((product_in)+(product_out))
+
+    #Adds the X coordinates and A coordinates of the mutated vertex.
+    X_coords.add(simplify(product_out/product_in))
+    A_coords.add(simplify(vertices[k]))
+
+  return A_coords, X_coords
+
+#Defining gr(3,6) and codifying plucker relations
+
+gr_36_quiver=np.array([[0,1,1,-1,-1,0,0,0,0,0],[-1,0,0,1,0,1,-1,0,0,0],[-1,0,0,1,0,0,0,1,0,0],[1,-1,-1,0,0,0,1,0,1,-1],[1,0,0,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0,0,0],[0,1,0,-1,0,0,0,0,0,0],[0,0,-1,0,0,0,0,0,0,0],[0,0,1,-1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0] ])
+gr_36_vertices=['a236','a235','a136','a356','a123','a234','a345','a126','a156','a456']
+gr_36_vertices_s=[Symbol(x) for x in gr_36_vertices]
+
+#This is the matrix from which the plucker relations will be evaluated
+dummy_matrix=np.array([[1,2,3,4,5,6],[7,8,9,10,11,12],[13,14,16,17,18,19]])
+
+#These are the associated nubmers to each vertex as listed above
+gr_36_vertices_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucker[1:])] for row in dummy_matrix ] )) for plucker in gr_36_vertices]
+
+
+#Later, I'll make code that actually just generates this stuff in general.
+
+
+#####
+# Below is the code I have used for testing
+#####
+
+
+#print(symbol_polylog(6,Symbol('x')/Symbol('y')))
+
+quiver_ex_2=np.array([[0,1],[-1,0]]) #This is the basic two-vertex quiver with one edge going from one vertex to the other: 1->2
+
+quiver_ex_3=np.array([[0,1,0],[-1,0,1],[0,-1,0]] ) #This is the basic three-vertex quiver with two edges, 1 -> 2 -> 3
+
+
+#This returns the A-coords after 9 random mutations on the gr_36 quiver
+gr36_coords=coordinates([randint(0,9) for x in range(9)],gr_36_quiver,gr_36_vertices)[0]
+
+#This returns the A-coords after 18 random mutations on quiver_ex_3
+quiver_ex_3_coords=coordinates([randint(0,2) for x in range(18)], quiver_ex_3)[0]
+
+#This should (theoreticallly) evaluate each A-coordinate with the associated numerical value to each plucker coordinate.
+evals_plucker=[]
+for expr in gr36_coords:
+  evals_plucker+=[expr.subs([z for z in zip(gr_36_vertices_s,gr_36_vertices_num)])]
+
+print(gr36_coords, len(gr36_coords))
+print()
+print(quiver_ex_3_coords, len(quiver_ex_3_coords))
+print()
+print(evals_plucker) #Currently returns "NaN, 0, and zoo" too often. Not sure what the difference is between NaN and zoo are. 
