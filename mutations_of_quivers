@@ -1,29 +1,59 @@
 import numpy as np
 from sympy import *
 from random import randint
+from random import random
+from math import isclose
+import sys
+from time import time
+from time import sleep
 
 #Here we consider quivers as nxn skew-symmetric matrices where the entries e_ij correspond to the number of edges going from vertex i into vertex j, with the number considered negative if the direction is reversed. Mutation is described on quivers in this manner in equation (1.1) at the bottom of the first page on Zickert's notes on Cluster Algebras.
 
 
 
+
 def mutation(vertex,quiver):
 #Function that mutates a given quiver at the given vertex
+  dummy_quiver=quiver.copy()
   for i in range(len(quiver)):
-    for j in range(len(quiver)):
+    for j in range(i):
       
       #Piecewise function as described in equation (1.1)
       if vertex == i or vertex == j:
-        quiver[i][j]=-quiver[i][j]
+        quiver[i][j]=-dummy_quiver[i][j]
 
-      elif quiver[i][vertex]*quiver[vertex][j]<=0:
-        quiver[i][j]=quiver[i][j]
+      elif dummy_quiver[i][vertex]*dummy_quiver[vertex][j]<=0:
+        quiver[i][j]=dummy_quiver[i][j]
 
       else:
-        quiver[i][j]=quiver[i][j]+abs(quiver[i][vertex])*quiver[vertex][j]
+        quiver[i][j]=dummy_quiver[i][j]+abs(dummy_quiver[i][vertex])*dummy_quiver[vertex][j]
+
+      quiver[j][i]=-quiver[i][j]
 
   return quiver
 
-def coordinates(mutations,quiver,vars=0):
+def quiver_mutations(mutations,quiver):
+  all_quivers=set()
+  mutation_so_far=[]
+  mutation_count=0
+  for k in mutations:
+    mutation_so_far+=[k]
+    #Update console
+    mutation_count+=1
+    sys.stdout.write('\r Mutation: {0}/{1}'.format(mutation_count,(len(mutations))))
+    sys.stdout.flush()
+    
+    #Mutates the quiver
+    quiver=mutation(k,quiver)
+
+    hashable_quiver=(tuple(tuple(quiver[i][j] for i in range(len(quiver))) for j in range(len(quiver))), tuple(mutation_so_far))
+    
+    all_quivers.add(hashable_quiver)
+
+  return all_quivers
+
+
+def coordinates(mutations,quiver,vars=0,xcoords=0,acoords=1):
   #This function returns a tuple of all A_coords and X_coords. Mutations are a list of vertices at which this function will perform mutations on the given quiver. The quiver's vertices are labeled by the variables in vars, which will be x0,...x(n-1) by default.
   
   #Currently there is nothing that differentiates between mutable and non-mutable vertices, and instead this differentiation is expected to be accounted for by the list of mutations inputed into the function.
@@ -42,49 +72,82 @@ def coordinates(mutations,quiver,vars=0):
 
   #Set of all X-coordinates. This block of code is designed to give all the X_coords generated from the first quiver. 
   #I think this should be edited so that it only affects mutable vertices, but I'm not sure.
-  X_coords=set()
-  product_in=1
-  product_out=1
-  for k in range(len(quiver)):
-    for i in range(len(quiver)):
-      if quiver[i][k]>0:
-        product_in*=quiver[i][k]*vertices[i]
-      elif quiver[i][k]<0:
-        product_out*=quiver[i][k]*vertices[i]*(-1)
+  if xcoords==1:
+    X_coords=set()
+    for k in range(mutable_vertices):
+      product_in=1
+      product_out=1
+      for i in range(len(quiver)):
+        if quiver[i][k]>0:
+          product_in*=quiver[i][k]*vertices[i]
+        elif quiver[i][k]<0:
+          product_out*=quiver[i][k]*vertices[i]*(-1)
       X_coords.add(product_out/product_in)
-
+  
+  mutation_count=0
   
   #Performs the mutations.
   for k in mutations:
 
+    #Update console
+    mutation_count+=1
+    sys.stdout.write('\r Mutation: {0}/{1}'.format(mutation_count,(len(mutations))))
+    sys.stdout.flush()
+    
+    
+    
     #Mutates the quiver
     quiver=mutation(k,quiver)
+
+    
+    #sys.stdout.write('\r \n Mutation {0} done'.format(mutation_count) )
+    #sys.stdout.flush()
+    
 
     #Mutates the associated vertex
     product_in=1
     product_out=1
-    for i in range(len(quiver)):
-      if quiver[i][k]>0:
-        product_in*=quiver[i][k]*vertices[i]
-      elif quiver[i][k]<0:
-        product_out*=quiver[i][k]*vertices[i]*(-1)
+    for k in range(mutable_vertices):
+      product_in=1
+      product_out=1
+      for i in range(len(quiver)):
+        if quiver[i][k]>0:
+          product_in*=quiver[i][k]*vertices[i]
+        elif quiver[i][k]<0:
+          product_out*=quiver[i][k]*vertices[i]*(-1)
 
-    vertices[k]=(vertices[k]**(-1))*((product_in)+(product_out))
+    vertices[k]=simplify(vertices[k]**(-1))*((product_in)+(product_out))
 
     #Adds the X coordinates and A coordinates of the mutated vertex.
-    X_coords.add(simplify(product_out/product_in))
-    A_coords.add(simplify(vertices[k]))
+    if xcoords==1:
+      X_coords.add(simplify(product_out/product_in))
+    if acoords==1:
+      A_coords.add(simplify(vertices[k]))
 
-  return A_coords, X_coords
+  X_coords.discard(1.0)
+  if xcoords==1 and acoords==1:
+    result=A_coords, X_coords
+  elif acoords==1:
+    result=A_coords
+  elif xcoords==1:
+    result=X_coords
+  
+  return result
 
 #Defining gr(3,6) and codifying plucker relations
 
-gr_36_quiver=np.array([[0,1,1,-1,-1,0,0,0,0,0],[-1,0,0,1,0,1,-1,0,0,0],[-1,0,0,1,0,0,0,1,0,0],[1,-1,-1,0,0,0,1,0,1,-1],[1,0,0,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0,0,0],[0,1,0,-1,0,0,0,0,0,0],[0,0,-1,0,0,0,0,0,0,0],[0,0,1,-1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0] ])
+mutable_vertices=4
+
+gr_36_quiver=np.array([[0,1,1,-1,-1,0,0,0,0,0],[-1,0,0,1,0,1,-1,0,0,0],[-1,0,0,1,0,0,0,1,-1,0],[1,-1,-1,0,0,0,1,0,1,-1],[1,0,0,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0,0,0],[0,1,0,-1,0,0,0,0,0,0],[0,0,-1,0,0,0,0,0,0,0],[0,0,1,-1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0] ])
 gr_36_vertices=['a236','a235','a136','a356','a123','a234','a345','a126','a156','a456']
 gr_36_vertices_s=[Symbol(x) for x in gr_36_vertices]
 
 #This is the matrix from which the plucker relations will be evaluated
-dummy_matrix=np.array([[1,2,3,4,5,6],[7,8,9,10,11,12],[13,14,16,17,18,19]])
+#dummy_matrix=np.array([[1,2,3,4,5,6],[7,8,9,10,11,12],[13,14,16,17,18,19]])
+
+dummy_matrix=np.array([[n+6*i+random() for n in range(6)] for i in range(3)])
+#print(dummy_matrix)
+
 
 #These are the associated nubmers to each vertex as listed above
 gr_36_vertices_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucker[1:])] for row in dummy_matrix ] )) for plucker in gr_36_vertices]
@@ -94,30 +157,128 @@ gr_36_vertices_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucke
 
 
 #####
-# Below is the code I have used for testing
+# Below is the main program I have used for testing
 #####
 
+def main(option1,num_of_mutations=1):
+  #quiver_ex_2=np.array([[0,1],[-1,0]]) #This is the basic two-vertex quiver with one edge going from one vertex to the other: 1->2
+  #quiver_ex_3=np.array([[0,1,0],[-1,0,1],[0,-1,0]] ) #This is the basic three-vertex quiver with two edges, 1 -> 2 -> 3
 
-#print(symbol_polylog(6,Symbol('x')/Symbol('y')))
+  #user_input=input('Enter option: ')
+  user_input=option1
 
-quiver_ex_2=np.array([[0,1],[-1,0]]) #This is the basic two-vertex quiver with one edge going from one vertex to the other: 1->2
+  if user_input=='test':
+    print(quiver_ex_2)
+    print()
+    print(mutation(0,quiver_ex_2))
 
-quiver_ex_3=np.array([[0,1,0],[-1,0,1],[0,-1,0]] ) #This is the basic three-vertex quiver with two edges, 1 -> 2 -> 3
+  if user_input=='qu':
+    return quiver_mutations([randint(0,3) for x in range(int(num_of_mutations))],gr_36_quiver)
+
+  if user_input=='gr':
+
+    start_time=time()
+    
+    #sys.stdout.write('\r Computing gr36_coords \n')
+    #sys.stdout.flush()
+    
+    gr36_coords=coordinates([randint(0,3) for x in range(int(num_of_mutations))],gr_36_quiver,gr_36_vertices,1,0)
+    
+
+    return gr36_coords
 
 
-#This returns the A-coords after 9 random mutations on the gr_36 quiver
-gr36_coords=coordinates([randint(0,9) for x in range(9)],gr_36_quiver,gr_36_vertices)[0]
 
-#This returns the A-coords after 18 random mutations on quiver_ex_3
-quiver_ex_3_coords=coordinates([randint(0,2) for x in range(18)], quiver_ex_3)[0]
+###########################
+# Main program code block #
+###########################
+print('''This program works by doing some number of random mutations repeatedly for some number of iterations. The program can be interrupted at any time with keyboard interrupt to print the result so far.  \n
+Enter "gr" to compute X-coordinates of gr(3,6). \n
+Enter "qu" to compute quivers resulting from mutations. \n
+Enter "test" to enter test mode (not useful). \n''')
+option1=input('Option: ')
+num_of_mutations=int(input('Enter the number of random mutations (not recommended to be larger than 20): '))
+iteration_limit=input('Enter the iteration limit or leave blank or enter 0 to iterate forever: ')
 
-#This should (theoreticallly) evaluate each A-coordinate with the associated numerical value to each plucker coordinate.
-evals_plucker=[]
-for expr in gr36_coords:
-  evals_plucker+=[expr.subs([z for z in zip(gr_36_vertices_s,gr_36_vertices_num)])]
+if iteration_limit=='':
+  iteration_limit=0
+iteration_limit=int(iteration_limit)
 
-print(gr36_coords, len(gr36_coords))
-print()
-print(quiver_ex_3_coords, len(quiver_ex_3_coords))
-print()
-print(evals_plucker) #Currently returns "NaN, 0, and zoo" too often. Not sure what the difference is between NaN and zoo are. 
+condition=True
+
+universal_start_time=time()
+
+final_result=set()
+iter=0
+try:
+  while condition==True:
+    iter+=1
+
+    for co in main(option1,num_of_mutations):
+      final_result.add(co)
+    
+    if option1=='gr':
+      sys.stdout.write('\r \n Iteration {1}: Found {0} X-coordinates. \n'.format(len(final_result),iter))
+      sys.stdout.flush()
+    
+    if option1=='qu':
+      sys.stdout.write('\r \n Found {0} quivers on iteration {1}. \n'.format(len(final_result),iter))
+      sys.stdout.flush()
+
+    
+    
+    if iteration_limit!=0:
+      condition= iter<iteration_limit
+except KeyboardInterrupt:
+  pass
+
+if option1=='gr':
+   #This block checks all pairs of coordinates and tests if they are identical symbolically and numerically.
+
+      gr36_coords=list(final_result)
+      #Numeric test for sameness
+      evals_plucker=[]
+      for expr in gr36_coords:
+        evals_plucker+=[expr.subs([z for z in zip(gr_36_vertices_s,gr_36_vertices_num)])]
+      
+      for j in range(len(evals_plucker)):
+        for i in range(len(evals_plucker)):
+          if j!=i:
+            if isclose(evals_plucker[i],evals_plucker[j]):
+              print('Match: ',evals_plucker[i],evals_plucker[j] )
+  
+      #Symbolic test for sameness
+      for i in range(len(gr36_coords)):
+        for j in range(i,len(gr36_coords)):
+          same_test=simplify(gr36_coords[i]-gr36_coords[j])
+          sys.stdout.write('\r Checking equivalence of {0},{1}    '.format(i,j))
+          sys.stdout.flush()   
+          if same_test==0:
+            print('Found equivalence at {0},{1}'.format(i,j))
+            if i!=j:
+              print('Found equivalence between expr at position {0} and expr at position {1}'.format(i,j))
+              print(gr36_coords.pop(j))
+      gr36_coords=set(gr36_coords) 
+      print(gr36_coords)
+      #print('Time for iteration:', time()-start_time)
+      sys.stdout.write('\r                                ')
+
+
+
+print('\n \n Final result: \n', final_result, '\n Number found: ',len(final_result))
+print('\n Total computation time: ', time()-universal_start_time)
+
+if option1=='qu':
+  test='Passed'
+  print('Test skew-symmetry: ')
+  for x in final_result:
+    x=list(list(t) for t in x)
+    y=x.pop(-1)
+    x=np.asarray(x[0])
+    skewtranspose=-np.transpose(x)
+    comparison=x==skewtranspose
+    if comparison.all()==False:
+      print(False)
+      test='Failed'
+    print(x,'\n','Mutations: ',y)
+  print('\n',test)
