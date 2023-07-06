@@ -5,14 +5,13 @@ from random import random
 from math import isclose
 import sys
 from time import time
-from time import sleep
+from quivers import generate_quiver
 
 
 gr_36_quiver=np.array([[0,1,1,-1,-1,0,0,0,0,0],[-1,0,0,1,0,1,-1,0,0,0],[-1,0,0,1,0,0,0,1,-1,0],[1,-1,-1,0,0,0,1,0,1,-1],[1,0,0,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0,0,0],[0,1,0,-1,0,0,0,0,0,0],[0,0,-1,0,0,0,0,0,0,0],[0,0,1,-1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0] ])
 gr_36_vertices=['a236','a235','a136','a356','a123','a234','a345','a126','a156','a456']
 gr_36_vertices_s=[Symbol(x) for x in gr_36_vertices]
 dummy_matrix=np.array([[n+6*i+random() for n in range(6)] for i in range(3)])
-#print(dummy_matrix)
 
 
 #These are the associated nubmers to each vertex as listed above
@@ -60,8 +59,7 @@ def quiver_mutations(mutations,quiver,testmode=False):
 
   return all_quivers
 
-
-def coordinates(mutations,quiver,vars=0,xcoords=0,acoords=0,mutables=0,testmode=False):
+def coordinates(mutations,quiver,vars=0,mutables=0,xcoords=0,acoords=0,clusters=0,testmode=False):
   #This function returns a tuple of all A_coords and X_coords. Mutations are a list of vertices at which this function will perform mutations on the given quiver. The quiver's vertices are labeled by the variables in vars, which will be x0,...x(n-1) by default.
   
   #Currently there is nothing that differentiates between mutable and non-mutable vertices, and instead this differentiation is expected to be accounted for by the list of mutations inputed into the function.
@@ -80,13 +78,13 @@ def coordinates(mutations,quiver,vars=0,xcoords=0,acoords=0,mutables=0,testmode=
   #Set of all A-coordinates, starts with all the vertices.
   A_coords={vertex for vertex in vertices}
   if testmode==True:
-    coords_with_mutations+=[(a,'n') for a in A_coords]
+    coords_with_mutations+=[(a,'') for a in A_coords]
   
   #Set of all X-coordinates. This block of code is designed to give all the X_coords generated from the first quiver. 
   #I think this should be edited so that it only affects mutable vertices, but I'm not sure.
   if xcoords==1:
     X_coords=set()
-    for k in range(mutables):
+    for k in range(mutables+1):
       product_in=1
       product_out=1
       for i in range(len(quiver)):
@@ -141,26 +139,36 @@ def coordinates(mutations,quiver,vars=0,xcoords=0,acoords=0,mutables=0,testmode=
   
   return result
 
-def main(option1,num_of_mutations=1,quiver='',find_xcoords=0,find_acoords=0,testmode=False):
-  
-  #user_input=input('Enter option: ')
-  user_input=option1
+def main(user_input,num_of_mutations=1,quiver_data='',find_xcoords=0,find_acoords=0,find_clusters=0,testmode=False):
 
-  if quiver=='gr36':
-    quiver=gr_36_quiver=np.array([[0,1,1,-1,-1,0,0,0,0,0],[-1,0,0,1,0,1,-1,0,0,0],[-1,0,0,1,0,0,0,1,-1,0],[1,-1,-1,0,0,0,1,0,1,-1],[1,0,0,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0,0,0],[0,1,0,-1,0,0,0,0,0,0],[0,0,-1,0,0,0,0,0,0,0],[0,0,1,-1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0] ])
+
+  quiver=quiver_data[0].copy()
+  verts=quiver_data[1].copy()
+  mutables=quiver_data[2]
+
+  #print('\n\n\n Testing \n\n\n ')
+  #print(quiver,verts,mutables)
+  #print(gr_36_quiver,gr_36_vertices,3)
+  #Create quiver data
+  if quiver_data=='gr36':
+    quiver=np.array([[0,1,1,-1,-1,0,0,0,0,0],[-1,0,0,1,0,1,-1,0,0,0],[-1,0,0,1,0,0,0,1,-1,0],[1,-1,-1,0,0,0,1,0,1,-1],[1,0,0,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0,0,0],[0,1,0,-1,0,0,0,0,0,0],[0,0,-1,0,0,0,0,0,0,0],[0,0,1,-1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0] ])
     verts=['a236','a235','a136','a356','a123','a234','a345','a126','a156','a456']
     mutables=3
 
-  elif quiver=='ex2':
-    quiver=quiver_ex_2=np.array([[0,1],[-1,0]]) #This is the basic two-vertex quiver with one edge going from one vertex to the other: 1->2
+  elif quiver_data=='ex2':
+    quiver=np.array([[0,1],[-1,0]]) #This is the basic two-vertex quiver with one edge going from one vertex to the other: 1->2
     mutables=1
     verts=0
 
-  elif quiver=='ex3':
+  elif quiver_data=='ex3':
    quiver=np.array([[0,1,0],[-1,0,1],[0,-1,0]] ) #This is the basic three-vertex quiver with two edges, 1 -> 2 -> 3
    mutables=2
    verts=0
 
+  if testmode==True:
+    test_quiver=generate_quiver('gr36')[0]
+    print('Testing generate_quiver: ', test_quiver==quiver)
+  
   mutations_list=[]
   lastint=-1
   for x in range(int(num_of_mutations)):
@@ -175,5 +183,5 @@ def main(option1,num_of_mutations=1,quiver='',find_xcoords=0,find_acoords=0,test
     return quiver_mutations(mutations_list,quiver,testmode)
 
   if user_input=='gr':
-    
-    return coordinates(mutations_list,quiver,verts,find_xcoords,find_acoords,mutables,testmode)
+    #print(mutations_list,quiver,verts,find_xcoords,find_acoords,find_clusters,testmode)
+    return coordinates(mutations_list,quiver,verts,mutables,find_xcoords,find_acoords,find_clusters,testmode)
