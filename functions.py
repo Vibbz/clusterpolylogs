@@ -3,7 +3,7 @@ from sympy import *
 from random import randint
 from random import random
 from math import isclose
-import sys
+from sys import stdout
 from time import time
 from quivers import generate_quiver
 
@@ -82,7 +82,7 @@ def coordinates(mutations,quiver,vars=0,mutables=0,xcoords=0,acoords=0,clusters=
   
   #Set of all X-coordinates. This block of code is designed to give all the X_coords generated from the first quiver. 
   #I think this should be edited so that it only affects mutable vertices, but I'm not sure.
-  if xcoords==1:
+  if xcoords==True:
     X_coords=set()
     for k in range(mutables+1):
       product_in=1
@@ -122,24 +122,24 @@ def coordinates(mutations,quiver,vars=0,mutables=0,xcoords=0,acoords=0,clusters=
         coords_with_mutations.append((simplify(vertices[mut]), mutations_so_far.copy()))
     
     #Adds the X coordinates and A coordinates of the mutated vertex.
-    if xcoords==1:
+    if xcoords==True:
       X_coords.add(simplify(product_out/product_in))
-    if acoords==1:
+    if acoords==True:
       A_coords.add(simplify(vertices[mut]))
 
   if testmode==True:
     print('\n Testmode output, coords with mutations: ', coords_with_mutations)
   
-  if xcoords==1 and acoords==1:
+  if xcoords==True and acoords==True:
     result=A_coords, X_coords
-  elif acoords==1:
+  elif acoords==True:
     result=A_coords
-  elif xcoords==1:
+  elif xcoords==True:
     result=X_coords
   
   return result
 
-def main(user_input,num_of_mutations=1,quiver_data='',find_xcoords=0,find_acoords=0,find_clusters=0,testmode=False):
+def main(user_input,num_of_mutations=1,quiver_data='',find_xcoords=False,find_acoords=False,find_clusters=False,testmode=False):
 
 
   quiver=quiver_data[0].copy()
