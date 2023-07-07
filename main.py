@@ -3,12 +3,10 @@ from sympy import *
 from random import randint
 from random import random
 from math import isclose
-import sys
-from time import time
-from time import sleep
+from sys import stdout
+from time import time, sleep
 from functions import mutation, quiver_mutations, coordinates, main
 from quivers import generate_quiver
-
 
 #Background:
 '''This program is designed to find x-coordinates and a-coordinates of a cluster algebra. 
@@ -38,11 +36,22 @@ The program works by iteratively applying random mutations and adding the newfou
 Here we consider quivers as nxn skew-symmetric matrices where the entries e_ij correspond to the number of edges going from vertex i into vertex j, with the number considered negative if the direction is reversed. Mutation is described on quivers in this manner in equation (1.1) at the bottom of the first page on Zickert's notes on Cluster Algebras.
 '''
 
-
 #Defining gr(3,6) and codifying plucker relations
 
-gr_36_quiver=np.array([[0,1,1,-1,-1,0,0,0,0,0],[-1,0,0,1,0,1,-1,0,0,0],[-1,0,0,1,0,0,0,1,-1,0],[1,-1,-1,0,0,0,1,0,1,-1],[1,0,0,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0,0,0],[0,1,0,-1,0,0,0,0,0,0],[0,0,-1,0,0,0,0,0,0,0],[0,0,1,-1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0] ])
+gr_36_quiver=np.array(
+  [[0,1,1,-1,-1,0,0,0,0,0],
+   [-1,0,0,1,0,1,-1,0,0,0],
+   [-1,0,0,1,0,0,0,1,-1,0],
+   [1,-1,-1,0,0,0,1,0,1,-1],
+   [1,0,0,0,0,0,0,0,0,0],
+   [0,-1,0,0,0,0,0,0,0,0],
+   [0,1,0,-1,0,0,0,0,0,0],
+   [0,0,-1,0,0,0,0,0,0,0],
+   [0,0,1,-1,0,0,0,0,0,0],
+   [0,0,0,1,0,0,0,0,0,0] ]
+)
 gr_36_vertices=['a236','a235','a136','a356','a123','a234','a345','a126','a156','a456']
+
 gr_36_vertices_s=[Symbol(x) for x in gr_36_vertices]
 
 #This is the matrix from which the plucker relations will be evaluated
@@ -57,8 +66,13 @@ gr_36_vertices_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucke
 
 #Later, I'll make code that actually just generates this stuff in general.
 
+#Live prints to console
+def overprint(s):
+  stdout.write(f'\r{s}')
+  stdout.flush()
 
-# Below is the main program
+
+# Below is the actual program
 
 
 
@@ -87,18 +101,23 @@ while True:
   if option1=='gr':
     find_coords=input('Enter "x" to find X-coords, "a" to find A-coords, or "cl" to find all the clusters: ')
     if find_coords=="x":
-      do_find_x_coords=1
-      do_find_a_coords=0
+      do_find_x_coords=True
+      do_find_a_coords=False
+      do_find_clusters=False
+    elif find_coords=='a':
+      do_find_a_coords=True
+      do_find_x_coords=False
+      do_find_clusters=False
+    elif find_coords=="cl":
+      do_find_clusters=True
     else:
-      do_find_a_coords=1
-      do_find_x_coords=0
-    if find_coords=="cl":
-      do_find_clusters=1
-    else:
-      do_find_clusters=0
+      do_find_clusters=False
+      do_find_a_coords=False
+      do_find_x_coords=False
   else:
-    do_find_a_coords=0
-    do_find_x_coords=0
+    do_find_a_coords=False
+    do_find_x_coords=False
+    do_find_clusters=False
   
   num_of_mutations=int(input('Enter the number of random mutations (not recommended to be larger than 20): '))
   iteration_limit=input('Enter the iteration limit or leave blank or enter 0 to iterate forever: ')
@@ -107,7 +126,7 @@ while True:
     iteration_limit=0
   iteration_limit=int(iteration_limit)
   
-  condition=True
+  keep_looping=True
   
   universal_start_time=time()
   
@@ -115,12 +134,12 @@ while True:
   iter=0
   
   try:
-    while condition==True:
+    while keep_looping==True:
       iter+=1
 
       if test_mode==True:
         print('\n General test mode output...')
-        print('Option 1: {0}'.format(option1))
+        print(f'Option 1: {option1}')
         print('Number of mutations: {0}'.format(num_of_mutations))
         print('Quiver: ',quiver_data[0])
         print('Vertices: ',quiver_data[1])
@@ -174,57 +193,50 @@ while True:
               final_result.remove(x)
             final_result=set(final_result)
           except:
-            print('\n Error in numeric test, or vertices are not plucker coordinates.  \n')
+            print('\n Error in numeric test. Maybe vertices are not plucker coordinates.  \n')
             pass
             
-          sys.stdout.write('\r \n {1}: Removed {4} duplicates. Found {3} new {2}-coordinates. Found {0} total {2}-coordinates. \n'.format(len(final_result),iter,find_coords.capitalize(),-old_length+len(final_result),len(to_remove)))
-          sys.stdout.flush()
+          overprint(f'\n{iter}: Removed {len(to_remove)} duplicates. Found {-old_length+len(final_result)} new {find_coords.capitalize()}-coordinates. Found {len(final_result)} total {find_coords}-coordinates.\n')
+          
         else:
-          sys.stdout.write('\r \n {1}: Found {3} new {2}-coordinates, {0} total {2}-coordinates. \n'.format(len(final_result),iter,find_coords.capitalize(),-old_length+len(final_result)))
-          sys.stdout.flush()
+          overprint(f'\n {iter}: Found {len(final_result)-old_length} new {find_coords.capitalize()}-coordinates, {len(final_result)} total {find_coords.capitalize()}-coordinates. \n')
           
         if option1=='qu':
-          sys.stdout.write('\r \n Found {0} quivers on iteration {1}. \n'.format(len(final_result),iter))
-          sys.stdout.flush()
-  
-      
+          overprint(f'\n{1}: Found {len(final_result)} total quivers.\n')
       
       if iteration_limit!=0:
-        condition= iter<iteration_limit
+        keep_looping= iter<iteration_limit
   except KeyboardInterrupt:
     pass
   
   
   #Test sameness of coordinates
   if option1=='gr':  
-    option3=input('Enter "y" to test equivalency among {0}-coordinates symbolically: '.format(find_coords))
-    if option3=='y':
+    option3=input(f'Enter "t" to test equivalency among {find_coords}-coordinates symbolically: ')
+    if option3=='t':
           final_result=list(final_result)
           #print(final_result[len(final_result)-1])
           #Symbolic test for sameness
           to_remove=set()
           for i in range(len(final_result)-1):
             for j in range(i+1,len(final_result)-1):
-              sys.stdout.write('\r Checking equivalence of {0},{1}    '.format(i,j))
-              sys.stdout.flush()   
+              overprint('Checking equivalence of {0},{1}    '.format(i,j))
               same_test=simplify(final_result[i]-final_result[j])
               if same_test==0:
-                print('Found equivalence at {0},{1}'.format(i,j))
+                print('\nFound equivalence at {0},{1}'.format(i,j))
                 if i!=j:
                   print('Found equivalence between expr at position {0} and expr at position {1}'.format(i,j))
                   to_remove.add(i)
-          tempvar=0
-          for index in to_remove:
-            final_result.pop(index-tempvar)
-            tempvar+=1
+          for i, index in enumerate(to_remove):
+            final_result.pop(index - i)
           final_result=set(final_result) 
           print(final_result)
           #print('Time for iteration:', time()-start_time)
-          sys.stdout.write('\r'+' '*20)
+          stdout.write('\r'+' '*20)
 
   
-  print('\n \n Final result: \n', final_result, '\n Number found: ',len(final_result))
-  print('\n Total computation time: ', time()-universal_start_time)
+  print('\n\nFinal result: \n', final_result, '\n Number found: ',len(final_result))
+  print('\nTotal computation time: ', time()-universal_start_time)
   
   
   
@@ -239,7 +251,7 @@ while True:
         x=np.asarray(x[0])
         skewtranspose=-np.transpose(x)
         comparison=x==skewtranspose
-        if comparison.all()==False:
+        if not comparison.any():
           print(False)
           test='Failed'
         print(x,'\n','Mutations: ',y)
