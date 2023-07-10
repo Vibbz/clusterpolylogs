@@ -1,15 +1,15 @@
 import numpy as np
-from sympy import *
+from sympy import simplify, Symbol
 from random import randint
 from random import random
 from math import isclose
 from sys import stdout
 from time import time, sleep
-from functions import mutation, quiver_mutations, coordinates, main
+from functions import same_cluster_test, overprint, mutation, quiver_mutations, coordinates, main
 from quivers import generate_quiver
 
 #Background:
-'''This program is designed to find x-coordinates and a-coordinates of a cluster algebra. 
+cluster_info_dump='''This program is designed to find x-coordinates and a-coordinates of a cluster algebra. 
 
 A cluster algebra is generated combinatorially from a quiver, a directed graph with labeled vertices 1,..n that has no 1- or 2-cycles, together with a "cluster" or an n-tuple decorating the cluster (i.e., a=(a_1,...a_n) is a cluster with each a_i associated to vertex i). We call the pair of a quiver and cluster a seed. 
 
@@ -31,10 +31,13 @@ We consider some quivers to have canonical vertex sets, in particular the associ
 
 The program works by iteratively applying random mutations and adding the newfound coordinates to a set. For the grassmanians, an additional numerical measure is added to check for duplicates modulo plucker relations.
 
-
-
 Here we consider quivers as nxn skew-symmetric matrices where the entries e_ij correspond to the number of edges going from vertex i into vertex j, with the number considered negative if the direction is reversed. Mutation is described on quivers in this manner in equation (1.1) at the bottom of the first page on Zickert's notes on Cluster Algebras.
+
+Created by Etienne Phillips at the University of Maryland Pure and Applied Mathematics REU 2023 working under Dr. Christian Zickert.
 '''
+
+results_dictionary={'key':'value'}
+result_number=0
 
 #Defining gr(3,6) and codifying plucker relations
 
@@ -67,9 +70,6 @@ gr_36_vertices_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucke
 #Later, I'll make code that actually just generates this stuff in general.
 
 #Live prints to console
-def overprint(s):
-  stdout.write(f'\r{s}')
-  stdout.flush()
 
 
 # Below is the actual program
@@ -79,23 +79,46 @@ def overprint(s):
 ###########################
 # Main program code block #
 ###########################
-print('''This program works by doing some number of random mutations repeatedly for some number of iterations. The program can be interrupted at any time with keyboard interrupt to print the result so far.  \n
-Enter "co" to compute coordinates. \n
-Enter "qu" to compute quivers resulting from mutations. \n
-Enter "test" to enter test mode (not useful). \n''')
 
+print('''This program works by doing some number of random mutations repeatedly for some number of iterations. The program can be interrupted during computations with keyboard interrupt to print the result so far.\n''') 
 while True:
+  print(f'''Please choose from the following options: \n 
+ info: returns information about this program and Cluster Algebras. \n
+ co: to compute coordinates of a cluster algebra. \n
+ qu: to find all quivers of a cluster algebra. \n
+ keys: print all keys for saved results, enter a key to print associated result. \n
+ debug: enter debug mode\n''')
   option1=''
   test_mode=False
+  skip_numeric_test_error=False
   while option1 not in ['gr','qu']:
-    option1=input('Option: ')
-    if option1=='test':
+    option1=input('Enter your choice: ')
+    if option1=='skip':
+      print('Ignoring numeric test error.')
+      skip_numeric_test_error=True
+    elif option1=='info':
+      print(cluster_info_dump)
+    elif option1=='debug':
       test_mode=True
       print('Test mode enabled.')
-    if option1=='co':
+    elif option1=='co':
       option1='gr'
+    elif option1=='keys':
+      print(list(results_dictionary.keys()))
+      print()
+    elif option1 in results_dictionary.keys():
+      print(f'\nPrinting final result: "{option1}"\n')
+      print(results_dictionary[option1])
+      print()
+    else:
+      print('Invalid option, try again. \n')
   
-  quiver_data_s=input('Enter the quiver to use.\n gr36 uses the quiver for gr(3,6) with plucker coordinate vertices. \n gr2n uses the quiver for gr(2,n) with plucker coordinate vertices. \n ex2 uses the quiver 1->2 with default vertex labeling. \n ex3 uses the quiver 1->2->3 with default vertex labeling. \n Enter: ')
+  quiver_data_s=input('Enter the quiver to use.\n'+
+ 'gr36 uses the quiver for gr(3,6) with plucker coordinate vertices.'+
+  '\ngr2n uses the quiver for gr(2,n) with plucker coordinate vertices.\n'+
+'ex2 uses the quiver 1->2 with default vertex labeling.\n'+
+'ex3 uses the quiver 1->2->3 with default vertex labeling.'+
+'\nEnter:')
   quiver_data=generate_quiver(quiver_data_s)
   
   if option1=='gr':
@@ -110,6 +133,8 @@ while True:
       do_find_clusters=False
     elif find_coords=="cl":
       do_find_clusters=True
+      do_find_a_coords=False
+      do_find_x_coords=False
     else:
       do_find_clusters=False
       do_find_a_coords=False
@@ -121,6 +146,9 @@ while True:
   
   num_of_mutations=int(input('Enter the number of random mutations (not recommended to be larger than 20): '))
   iteration_limit=input('Enter the iteration limit or leave blank or enter 0 to iterate forever: ')
+  
+
+
   
   if iteration_limit=='':
     iteration_limit=0
@@ -134,11 +162,13 @@ while True:
   iter=0
   
   try:
+    last_coordinates_found=1
+    
     while keep_looping==True:
       iter+=1
-
+      
       if test_mode==True:
-        print('\n General test mode output...')
+        print('\nGeneral test mode output...')
         print(f'Option 1: {option1}')
         print('Number of mutations: {0}'.format(num_of_mutations))
         print('Quiver: ',quiver_data[0])
@@ -146,72 +176,119 @@ while True:
         print('Mutables: ',quiver_data[2])
         print('Numerical vertices: ', quiver_data[3])
         print()
-
       
       ####################### 
       #Actually calling main#
       new_results=main(option1,num_of_mutations,[quiver_data[0].copy(),quiver_data[1].copy(),quiver_data[2],quiver_data[3].copy()],do_find_x_coords,do_find_a_coords,do_find_clusters,test_mode)
       
       old_length=len(final_result)
+
+      
+      #To prevent infinite runtime after all coordinates are found.
+      if last_coordinates_found>0:
+        total_duplicates=0
       
       for co in new_results:
         final_result.add(co)
       
       if option1=='gr':
         #Numeric test for equality modulo plucker relations
-        #if statement is standin
         
         vertices_numerical=quiver_data[3].copy()
         vertices=[Symbol(x) for x in quiver_data[1]]
+        try:
+          time_to_complete_numeric_test=time()
+          final_result_list=list(x for x in final_result)
+          to_remove=set()
+          pairs_of_dupes_found=0
 
-        
-        if True==True:
-          try:
-            to_remove=[]
-            pairs_of_dupes_found=0
+          if  not do_find_clusters:
             
-            evals_plucker=[expr.subs([z for z in zip(vertices,vertices_numerical)]) for expr in final_result]
+            evals_plucker=[expr.subs([z for z in zip(vertices,vertices_numerical)]) for expr in final_result_list]
             
+            overprint(f'Time to complete numeric test: ')
             for j in range(len(evals_plucker)):
-              for i in range(j,len(evals_plucker)):
-                  if j!=i:
-                    if isclose(evals_plucker[i],evals_plucker[j]):
+              for i in range(j+1,len(evals_plucker)):
+                  if j!=i and isclose(evals_plucker[i],evals_plucker[j])==True:
                       pairs_of_dupes_found+=1
-  
-                      #Testmode information
-                      #if test_mode==True:
-                      #  print('\n Test mode output, finding duplicates: \n', i, j, list(final_result)[i],list(final_result)[j], '\n', list(final_result)[i].subs([z for z in zip(vertices,vertices_numerical)]), list(final_result)[j].subs([z for z in zip(vertices,vertices_numerical)]),evals_plucker[i],evals_plucker[j])
-                      #####################
-                      to_remove+=[list(final_result)[j]]
-  
-            if pairs_of_dupes_found==len(to_remove) and test_mode==True:
-              print('Test dupes = amt removed passed')
-            elif test_mode==True:
-              print('Test dupes = amt rmoved failed', pairs_of_dupes_found, len(to_remove))
+                      to_remove.add(final_result_list[j])
 
-            for x in to_remove:
-              final_result.remove(x)
-            final_result=set(final_result)
-          except:
-            print('\n Error in numeric test. Maybe vertices are not plucker coordinates.  \n')
-            pass
+          elif do_find_clusters:
+
+            evals_plucker_clusters=[list(expr.subs([z for z in zip(vertices,vertices_numerical)]) for expr in cluster) for cluster in final_result_list]
+
             
-          overprint(f'\n{iter}: Removed {len(to_remove)} duplicates. Found {-old_length+len(final_result)} new {find_coords.capitalize()}-coordinates. Found {len(final_result)} total {find_coords}-coordinates.\n')
+            overprint(f'Time to complete numeric test: ')
+            for j in range(len(evals_plucker_clusters)):
+              for i in range(j+1,len(evals_plucker_clusters)):
+                if j!=i and same_cluster_test(evals_plucker_clusters[j],evals_plucker_clusters[i])==True:
+                  pairs_of_dupes_found+=1
+                  to_remove.add(final_result_list[j])
           
-        else:
-          overprint(f'\n {iter}: Found {len(final_result)-old_length} new {find_coords.capitalize()}-coordinates, {len(final_result)} total {find_coords.capitalize()}-coordinates. \n')
+
+          else:
+            print('\nError: Something weird happened with do_find_clusters. \n')
+            raise KeyboardInterrupt
+    
+          #Testmode stuff
+          if pairs_of_dupes_found==len(to_remove) and test_mode==True:
+            print('Test dupes = amt removed passed')
+          elif test_mode==True:
+            print('Test dupes = amt rmoved failed', pairs_of_dupes_found, len(to_remove))
+          ###
+
+          total_duplicates+=len(to_remove)
+  
+          final_result=final_result - to_remove
+          
+          overprint(f'Time to complete numeric test: {time()-time_to_complete_numeric_test}\n')
+          
+        except Exception as e:
+          if skip_numeric_test_error==False:
+            print('\n Error in numeric test. Maybe vertices are not plucker coordinates.  \n')
+            print('Error caused by: ', e)
+            print()
+            keep_looping=False
+          pass
+            
+        overprint(f'\n{iter}: Found {-old_length+len(final_result)} new and {len(to_remove)} duplicate {find_coords.capitalize()}-coordinates. Total: {len(final_result)}.\n')
+
+        last_coordinates_found= len(final_result)-old_length
+          
           
         if option1=='qu':
           overprint(f'\n{1}: Found {len(final_result)} total quivers.\n')
+
+      #Stops program if too many consecutive duplicates are found.
+      if last_coordinates_found==0 and total_duplicates>50:
+        overprint(f'\nFound {total_duplicates}/500 consecutive duplicates. \n\n')
+        if total_duplicates>=500:
+          print('Stopping...')
+          raise KeyboardInterrupt
       
       if iteration_limit!=0:
         keep_looping= iter<iteration_limit
+
   except KeyboardInterrupt:
     pass
   
-  
-  #Test sameness of coordinates
-  if option1=='gr':  
+
+  if option1=='gr':
+    try:
+      option4=input(f'Enter "s" to simplify results or press enter to skip: ')
+      if option4=='s':
+        newresult=[]
+        time_to_simplify=time()
+        for i,x in enumerate(final_result):
+          overprint(f'Simplifying element {i} / {len(final_result)}')
+          newresult+=[simplify(x)]
+        final_result=newresult
+        print('Time to simplify: ',time()-time_to_simplify)
+    except:
+      pass
+      
+  #Test mode stuff
+  if option1=='gr' and test_mode==True:  
     option3=input(f'Enter "t" to test equivalency among {find_coords}-coordinates symbolically: ')
     if option3=='t':
           final_result=list(final_result)
@@ -231,12 +308,17 @@ while True:
             final_result.pop(index - i)
           final_result=set(final_result) 
           print(final_result)
-          #print('Time for iteration:', time()-start_time)
           stdout.write('\r'+' '*20)
+  ###
 
+
+  result_number+=1
+  new_result_key=f'{find_coords}'+f'{result_number}'
+  results_dictionary[new_result_key]=final_result
   
-  print('\n\nFinal result: \n', final_result, '\n Number found: ',len(final_result))
+  print('\n\nResult: \n', final_result, f'\n Final result key:{new_result_key} \nNumber found: {len(final_result)}')
   print('\nTotal computation time: ', time()-universal_start_time)
+  
   
   
   
@@ -257,5 +339,6 @@ while True:
         print(x,'\n','Mutations: ',y)
       print('\n',test)
   
-  print('\n Run again:')
+  print('\n Running again.')
 
+  
