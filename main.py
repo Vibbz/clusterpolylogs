@@ -5,7 +5,7 @@ from random import random
 from math import isclose
 from sys import stdout
 from time import time, sleep
-from functions import same_cluster_test, overprint, mutation, quiver_mutations, coordinates, main
+from functions import same_cluster_test, overprint, mutation, quiver_mutations, coordinates, main, numerical_test
 from quivers import generate_quiver
 
 #Background:
@@ -159,13 +159,13 @@ while True:
   universal_start_time=time()
   
   final_result=set()
-  iter=0
+  iteration=0
   
   try:
     last_coordinates_found=1
     
     while keep_looping==True:
-      iter+=1
+      iteration+=1
       
       if test_mode==True:
         print('\nGeneral test mode output...')
@@ -193,71 +193,15 @@ while True:
       
       if option1=='gr':
         #Numeric test for equality modulo plucker relations
+        temp_object=numerical_test(iteration,quiver_data,final_result,do_find_clusters,0,old_length,skip_numeric_test_error,find_coords,keep_looping)
+        final_result=temp_object[0]
+        last_coordinates_found=temp_object[1]
+        keep_looping=temp_object[2]
         
-        vertices_numerical=quiver_data[3].copy()
-        vertices=[Symbol(x) for x in quiver_data[1]]
-        try:
-          time_to_complete_numeric_test=time()
-          final_result_list=list(x for x in final_result)
-          to_remove=set()
-          pairs_of_dupes_found=0
-
-          if  not do_find_clusters:
-            
-            evals_plucker=[expr.subs([z for z in zip(vertices,vertices_numerical)]) for expr in final_result_list]
-            
-            overprint(f'Time to complete numeric test: ')
-            for j in range(len(evals_plucker)):
-              for i in range(j+1,len(evals_plucker)):
-                  if j!=i and isclose(evals_plucker[i],evals_plucker[j])==True:
-                      pairs_of_dupes_found+=1
-                      to_remove.add(final_result_list[j])
-
-          elif do_find_clusters:
-
-            evals_plucker_clusters=[list(expr.subs([z for z in zip(vertices,vertices_numerical)]) for expr in cluster) for cluster in final_result_list]
-
-            
-            overprint(f'Time to complete numeric test: ')
-            for j in range(len(evals_plucker_clusters)):
-              for i in range(j+1,len(evals_plucker_clusters)):
-                if j!=i and same_cluster_test(evals_plucker_clusters[j],evals_plucker_clusters[i])==True:
-                  pairs_of_dupes_found+=1
-                  to_remove.add(final_result_list[j])
+        
           
-
-          else:
-            print('\nError: Something weird happened with do_find_clusters. \n')
-            raise KeyboardInterrupt
-    
-          #Testmode stuff
-          if pairs_of_dupes_found==len(to_remove) and test_mode==True:
-            print('Test dupes = amt removed passed')
-          elif test_mode==True:
-            print('Test dupes = amt rmoved failed', pairs_of_dupes_found, len(to_remove))
-          ###
-
-          total_duplicates+=len(to_remove)
-  
-          final_result=final_result - to_remove
-          
-          overprint(f'Time to complete numeric test: {time()-time_to_complete_numeric_test}\n')
-          
-        except Exception as e:
-          if skip_numeric_test_error==False:
-            print('\n Error in numeric test. Maybe vertices are not plucker coordinates.  \n')
-            print('Error caused by: ', e)
-            print()
-            keep_looping=False
-          pass
-            
-        overprint(f'\n{iter}: Found {-old_length+len(final_result)} new and {len(to_remove)} duplicate {find_coords.capitalize()}-coordinates. Total: {len(final_result)}.\n')
-
-        last_coordinates_found= len(final_result)-old_length
-          
-          
-        if option1=='qu':
-          overprint(f'\n{1}: Found {len(final_result)} total quivers.\n')
+      if option1=='qu':
+        overprint(f'\n{1}: Found {len(final_result)} total quivers.\n')
 
       #Stops program if too many consecutive duplicates are found.
       if last_coordinates_found==0 and total_duplicates>50:
@@ -267,13 +211,13 @@ while True:
           raise KeyboardInterrupt
       
       if iteration_limit!=0:
-        keep_looping= iter<iteration_limit
+        keep_looping= iteration < iteration_limit
 
   except KeyboardInterrupt:
     pass
   
 
-  if option1=='gr':
+  if option1=='gr' and test_mode==True:
     try:
       option4=input(f'Enter "s" to simplify results or press enter to skip: ')
       if option4=='s':
@@ -340,5 +284,3 @@ while True:
       print('\n',test)
   
   print('\n Running again.')
-
-  
