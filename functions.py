@@ -8,7 +8,42 @@ from time import time
 from quivers import generate_quiver
 
 
-gr_36_quiver=np.array([[0,1,1,-1,-1,0,0,0,0,0],[-1,0,0,1,0,1,-1,0,0,0],[-1,0,0,1,0,0,0,1,-1,0],[1,-1,-1,0,0,0,1,0,1,-1],[1,0,0,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0,0,0],[0,1,0,-1,0,0,0,0,0,0],[0,0,-1,0,0,0,0,0,0,0],[0,0,1,-1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0] ])
+def overprint(s):
+  stdout.write(f'\r{s}')
+  stdout.flush()
+
+def same_cluster_test(cluster1,cluster2):
+  if len(cluster1)!=len(cluster2):
+    return False
+
+  threshhold=len(cluster1)
+  equalities=0
+  
+  for i in range(len(cluster1)):
+    for j in range(len(cluster2)):
+      if isclose(cluster1[i],cluster2[j]):
+        equalities+=1
+
+  if threshhold==equalities:
+    return True
+  if threshhold<equalities:
+    print(cluster1,cluster2)
+    print('Threshhold < equalities')
+    return True
+  else:
+    return False
+
+gr_36_quiver=np.array(
+  [[0,1,1,-1,-1,0,0,0,0,0],
+   [-1,0,0,1,0,1,-1,0,0,0],
+   [-1,0,0,1,0,0,0,1,-1,0],
+   [1,-1,-1,0,0,0,1,0,1,-1],
+   [1,0,0,0,0,0,0,0,0,0],
+   [0,-1,0,0,0,0,0,0,0,0],
+   [0,1,0,-1,0,0,0,0,0,0],
+   [0,0,-1,0,0,0,0,0,0,0],
+   [0,0,1,-1,0,0,0,0,0,0],
+   [0,0,0,1,0,0,0,0,0,0] ])
 gr_36_vertices=['a236','a235','a136','a356','a123','a234','a345','a126','a156','a456']
 gr_36_vertices_s=[Symbol(x) for x in gr_36_vertices]
 dummy_matrix=np.array([[n+6*i+random() for n in range(6)] for i in range(3)])
@@ -45,8 +80,7 @@ def quiver_mutations(mutations,quiver,testmode=False):
     mutation_so_far+=[k]
     #Update console
     mutation_count+=1
-    sys.stdout.write('\r Mutation: {0}/{1}'.format(mutation_count,(len(mutations))))
-    sys.stdout.flush()
+    overprint('Mutation: {0}/{1}'.format(mutation_count,(len(mutations))))
     
     #Mutates the quiver
     quiver=mutation(k,quiver)
@@ -59,10 +93,12 @@ def quiver_mutations(mutations,quiver,testmode=False):
 
   return all_quivers
 
-def coordinates(mutations,quiver,vars=0,mutables=0,xcoords=0,acoords=0,clusters=0,testmode=False):
+def coordinates(mutations,quiver,vars=0,mutables=0,xcoords=False,acoords=False,find_clusters=False,testmode=False):
   #This function returns a tuple of all A_coords and X_coords. Mutations are a list of vertices at which this function will perform mutations on the given quiver. The quiver's vertices are labeled by the variables in vars, which will be x0,...x(n-1) by default.
   
   #Currently there is nothing that differentiates between mutable and non-mutable vertices, and instead this differentiation is expected to be accounted for by the list of mutations inputed into the function.
+
+  coordinatescomputetimetest=time()
 
   if testmode==True:
     mutations_so_far=[]
@@ -92,7 +128,11 @@ def coordinates(mutations,quiver,vars=0,mutables=0,xcoords=0,acoords=0,clusters=
           product_in*=quiver[i][k]*vertices[i]
         elif quiver[i][k]<0:
           product_out*=quiver[i][k]*vertices[i]*(-1)
+      #Simplify?
       X_coords.add(product_out/product_in)
+
+  if find_clusters==True:
+    clusters={frozenset([vertex for vertex in vertices])}
   
   mutation_count=0
   #Performs the mutations.
@@ -101,8 +141,7 @@ def coordinates(mutations,quiver,vars=0,mutables=0,xcoords=0,acoords=0,clusters=
       mutations_so_far+=[mut]
     #Update console
     mutation_count+=1
-    sys.stdout.write('\r Mutation: {0}/{1}'.format(mutation_count,(len(mutations))))
-    sys.stdout.flush()
+    overprint('Mutation: {0}/{1}'.format(mutation_count,(len(mutations))))
     
     #Mutates the quiver
     quiver=mutation(mut,quiver)
@@ -123,12 +162,27 @@ def coordinates(mutations,quiver,vars=0,mutables=0,xcoords=0,acoords=0,clusters=
     
     #Adds the X coordinates and A coordinates of the mutated vertex.
     if xcoords==True:
-      X_coords.add(simplify(product_out/product_in))
-    if acoords==True:
-      A_coords.add(simplify(vertices[mut]))
 
+      X_coords.add(product_out/product_in)
+
+      for k in range(mutables+1):
+        product_in=1
+        product_out=1
+        for i in range(len(quiver)):
+          if quiver[i][k]>0:
+            product_in*=quiver[i][k]*vertices[i]
+          elif quiver[i][k]<0:
+            product_out*=quiver[i][k]*vertices[i]*(-1)
+        X_coords.add(product_out/product_in)
+        
+    if acoords==True:
+      A_coords.add(vertices[mut])
+
+    if find_clusters==True:
+      clusters.add(frozenset([simplify(vertex) for vertex in vertices]))
+      
   if testmode==True:
-    print('\n Testmode output, coords with mutations: ', coords_with_mutations)
+    print('\nTestmode output, coords with mutations: ', coords_with_mutations)
   
   if xcoords==True and acoords==True:
     result=A_coords, X_coords
@@ -136,6 +190,10 @@ def coordinates(mutations,quiver,vars=0,mutables=0,xcoords=0,acoords=0,clusters=
     result=A_coords
   elif xcoords==True:
     result=X_coords
+  elif find_clusters==True:
+    result=clusters
+
+  overprint(f'Time to compute coordinates: {time()-coordinatescomputetimetest}')
   
   return result
 
@@ -173,10 +231,11 @@ def main(user_input,num_of_mutations=1,quiver_data='',find_xcoords=False,find_ac
   lastint=-1
   for x in range(int(num_of_mutations)):
     randomint=randint(0,mutables)
-    while randomint==lastint:
+    while randomint==lastint and mutables>0:
       randomint=randint(0,mutables)
     mutations_list+=[randomint]
     lastint=randomint
+
   
   if user_input=='qu':
     
