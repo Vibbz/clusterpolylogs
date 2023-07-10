@@ -193,7 +193,7 @@ def coordinates(mutations,quiver,vars=0,mutables=0,xcoords=False,acoords=False,f
   elif find_clusters==True:
     result=clusters
 
-  overprint(f'Time to compute coordinates: {time()-coordinatescomputetimetest}')
+  overprint(f'Time to compute coordinates: {time()-coordinatescomputetimetest}\n')
   
   return result
 
@@ -242,5 +242,74 @@ def main(user_input,num_of_mutations=1,quiver_data='',find_xcoords=False,find_ac
     return quiver_mutations(mutations_list,quiver,testmode)
 
   if user_input=='gr':
-    #print(mutations_list,quiver,verts,find_xcoords,find_acoords,find_clusters,testmode)
+    
     return coordinates(mutations_list,quiver,verts,mutables,find_xcoords,find_acoords,find_clusters,testmode)
+
+
+
+                       
+def numerical_test(iter, quiver_data,final_result,do_find_clusters,total_duplicates,old_length, skip_numeric_test_error,find_coords,keep_looping,test_mode=False):
+
+  
+  vertices_numerical=quiver_data[3].copy()
+  vertices=[Symbol(x) for x in quiver_data[1]]
+  try:
+    time_to_complete_numeric_test=time()
+    final_result_list=list(x for x in final_result)
+    to_remove=set()
+    pairs_of_dupes_found=0
+
+    if  not do_find_clusters:
+      
+      evals_plucker=[expr.subs([z for z in zip(vertices,vertices_numerical)]) for expr in final_result_list]
+      
+      overprint(f'Time to complete numeric test: ')
+      for j in range(len(evals_plucker)):
+        for i in range(j+1,len(evals_plucker)):
+            if j!=i and isclose(evals_plucker[i],evals_plucker[j])==True:
+                pairs_of_dupes_found+=1
+                to_remove.add(final_result_list[j])
+
+    elif do_find_clusters:
+
+      evals_plucker_clusters=[list(expr.subs([z for z in zip(vertices,vertices_numerical)]) for expr in cluster) for cluster in final_result_list]
+
+      
+      overprint('Time to complete numeric test: ')
+      for j in range(len(evals_plucker_clusters)):
+        for i in range(j+1,len(evals_plucker_clusters)):
+          if j!=i and same_cluster_test(evals_plucker_clusters[j],evals_plucker_clusters[i])==True:
+            pairs_of_dupes_found+=1
+            to_remove.add(final_result_list[j])
+    
+
+    else:
+      print('\nError: Something weird happened with do_find_clusters. \n')
+      raise KeyboardInterrupt
+
+    #Testmode stuff
+    if pairs_of_dupes_found==len(to_remove) and test_mode==True:
+      print('Test dupes = amt removed passed')
+    elif test_mode==True:
+      print('Test dupes = amt rmoved failed', pairs_of_dupes_found, len(to_remove))
+    ###
+
+    total_duplicates+=len(to_remove)
+
+    final_result=final_result - to_remove
+    
+    overprint(f'Time to complete numeric test: {time()-time_to_complete_numeric_test}\n')
+    
+  except Exception as e:
+    if skip_numeric_test_error==False:
+      print('\n Error in numeric test. Maybe vertices are not plucker coordinates.  \n')
+      print('Error caused by: ', e)
+      print()
+      keep_looping=False
+    pass
+      
+  overprint(f'\n{iter}: Found {-old_length+len(final_result)} new and {len(to_remove)} duplicate {find_coords.capitalize()}-coordinates. Total: {len(final_result)}\n')
+
+  last_coordinates_found= len(final_result)-old_length
+
+  return final_result, last_coordinates_found, keep_looping
