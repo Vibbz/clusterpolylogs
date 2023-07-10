@@ -13,6 +13,8 @@ def grassmanian_vertex_indices(i,j,p,q,n):
   return index
 
 def generate_quiver(user_input):
+  while user_input not in ['ex2','ex3','gr36'] and user_input.startswith('gr2')==False:
+    user_input=input('Please enter an available quiver: ')
   quiver=[[0]]
   verts=0
   mutables=0
@@ -22,10 +24,13 @@ def generate_quiver(user_input):
     quiver=np.array([[0,1],[-1,0]]) #This is the basic two-vertex quiver with one edge going from one vertex to the other: 1->2
     mutables=1
     verts=0
+    
   if user_input=='ex3':
     quiver=np.array([[0,1,0],[-1,0,1],[0,-1,0]] ) #This is the basic three-vertex quiver with two edges, 1 -> 2 -> 3
     mutables=2
     verts=0
+    verts_num=[random(),random()*100,random()*10000]
+
   if user_input=='gr36':
     quiver=np.array([[0,1,1,-1,-1,0,0,0,0,0],[-1,0,0,1,0,1,-1,0,0,0],[-1,0,0,1,0,0,0,1,-1,0],[1,-1,-1,0,0,0,1,0,1,-1],[1,0,0,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0,0,0],[0,1,0,-1,0,0,0,0,0,0],[0,0,-1,0,0,0,0,0,0,0],[0,0,1,-1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0] ])
     verts=['a236','a235','a136','a356','a123','a234','a345','a126','a156','a456']
@@ -35,9 +40,12 @@ def generate_quiver(user_input):
 
     verts_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucker[1:])] for row in dummy_matrix ] )) for plucker in verts]
 
-  if user_input=='gr2n':
-    print('\n Generating quiver for Gr(2,n)')
-    n=int(input('Enter dimension of space (n): '))
+  if user_input.startswith('gr2'):
+    print('\nGenerating quiver for Gr(2,n)')
+    try:
+      n=int(user_input[3])
+    except:
+      n=int(input('Enter dimension of space (n): '))
     p=2
     q=n-p
   
@@ -113,5 +121,8 @@ def generate_quiver(user_input):
         quiver[i][(i-mutables-2)*(q-1)]
       elif i>mutables+p+1:
         quiver[i][i-p-q]=1
+
+  if user_input in ['ex2','ex3']:
+    verts=['x{0}'.format(i+1) for i in range(len(quiver))]
   
   return quiver,verts,mutables,verts_num
