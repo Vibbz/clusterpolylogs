@@ -1,7 +1,11 @@
 import numpy as np
 from random import random
+from itertools import combinations
+from sympy import Symbol
 
-def grassmanian_vertex_indices(i,j,p,q,n):
+
+
+def grassmannian_vertex_indices(i,j,p,q,n):
   index=[]
   if i<=j:
     index+=list(range(i+1,p+1))
@@ -13,7 +17,7 @@ def grassmanian_vertex_indices(i,j,p,q,n):
   return index
 
 def generate_quiver(user_input):
-  while user_input not in ['ex2','ex3','gr36'] and user_input.startswith('gr2')==False:
+  while user_input not in ['ex2','ex3','gr36','gr37'] and user_input.startswith('gr2')==False:
     user_input=input('Please enter an available quiver: ')
   quiver=[[0]]
   verts=0
@@ -35,21 +39,61 @@ def generate_quiver(user_input):
     quiver=np.array([[0,1,1,-1,-1,0,0,0,0,0],[-1,0,0,1,0,1,-1,0,0,0],[-1,0,0,1,0,0,0,1,-1,0],[1,-1,-1,0,0,0,1,0,1,-1],[1,0,0,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0,0,0],[0,1,0,-1,0,0,0,0,0,0],[0,0,-1,0,0,0,0,0,0,0],[0,0,1,-1,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0] ])
     verts=['a236','a235','a136','a356','a123','a234','a345','a126','a156','a456']
     mutables=3
+
     
     dummy_matrix=np.array([[n+6*i+random() for n in range(6)] for i in range(3)])
 
+    verts=verts+list(set([f'a{c[0]}{c[1]}{c[2]}' for c in combinations(list(range(1,7)),3)])-set(verts))
+    
     verts_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucker[1:])] for row in dummy_matrix ] )) for plucker in verts]
 
+  
+  if user_input=='gr37':
+    quiver=np.array([
+      [0,1,0,1,-1,0,-1,0,0,0,0,0,0],
+      [-1,0,1,0,1,-1,0,0,0,0,0,0,0], 
+      [0,-1,0,0,0,1,0,1,-1,0,0,0,0],
+      [-1,0,0,0,1,0,0,0,0,1,-1,0,0],
+      [1,-1,0,-1,0,1,0,0,0,0,1,-1,0],
+      [0,1,-1,0,-1,0,0,0,1,0,0,1,-1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,-1,0,0,0,0,0,0,0,0,0,0],
+      [0,0,1,0,0,-1,0,0,0,0,0,0,0],
+      [0,0,0,-1,0,0,0,0,0,0,0,0,0],
+      [0,0,0,1,-1,0,0,0,0,0,0,0,0],
+      [0,0,0,0,1,-1,0,0,0,0,0,0,0],
+      [0,0,0,0,0,1,0,0,0,0,0,0,0]] )
+    
+    
+    
+    verts=[]
+    for i in range(1,3):
+      for j in range(1,4):
+        verts+=[f'a{grassmannian_vertex_indices(i,j,3,4,7)[0]}{grassmannian_vertex_indices(i,j,3,4,7)[1]}{grassmannian_vertex_indices(i,j,3,4,7)[2]}']
+    verts+=['a123']
+    verts+=[f'a{grassmannian_vertex_indices(1,4,3,4,7)[0]}{grassmannian_vertex_indices(1,4,3,4,7)[1]}{grassmannian_vertex_indices(1,4,3,4,7)[2]}',f'a{grassmannian_vertex_indices(2,4,3,4,7)[0]}{grassmannian_vertex_indices(2,4,3,4,7)[1]}{grassmannian_vertex_indices(2,4,3,4,7)[2]}',f'a{grassmannian_vertex_indices(3,1,3,4,7)[0]}{grassmannian_vertex_indices(3,1,3,4,7)[1]}{grassmannian_vertex_indices(3,1,3,4,7)[2]}',f'a{grassmannian_vertex_indices(3,2,3,4,7)[0]}{grassmannian_vertex_indices(3,2,3,4,7)[1]}{grassmannian_vertex_indices(3,2,3,4,7)[2]}',f'a{grassmannian_vertex_indices(3,3,3,4,7)[0]}{grassmannian_vertex_indices(3,3,3,4,7)[1]}{grassmannian_vertex_indices(3,3,3,4,7)[2]}',f'a{grassmannian_vertex_indices(3,4,3,4,7)[0]}{grassmannian_vertex_indices(3,4,3,4,7)[1]}{grassmannian_vertex_indices(3,4,3,4,7)[2]}']
+    mutables=5
+
+    dummy_matrix=np.array([[n+6*i+random() for n in range(7)] for i in range(3)])
+
+    
+    verts=verts+list(set([f'a{c[0]}{c[1]}{c[2]}' for c in combinations(list(range(1,8)),3)])-set(verts))
+
+    
+    verts_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucker[1:])] for row in dummy_matrix ] )) for plucker in verts]
+
+    
+
+  
   if user_input.startswith('gr2'):
-    print('\nGenerating quiver for Gr(2,n)')
     try:
-      n=int(user_input[3])
+      n=int(user_input[3:])
     except:
       n=int(input('Enter dimension of space (n): '))
     p=2
     q=n-p
   
-    print('Computing the quiver for Gr({0},{1})...'.format(p,n))
+    print('Generating quiver for Gr({0},{1})...'.format(p,n))
     
     quiver_size=p*q+1
     mutables=q-2
@@ -72,14 +116,17 @@ def generate_quiver(user_input):
     verts=[]
     for i in range(1,p+1):
       for j in range(1,q+1):
-        index=grassmanian_vertex_indices(i,j,p,q,n)
+        index=grassmannian_vertex_indices(i,j,p,q,n)
         verts+=['a{0}{1}'.format(index[0],index[1])]
     verts+=['a12']
 
-    dummy_matrix=np.array([[n+6*i+random() for n in range(6)] for i in range(2)])
+    dummy_matrix=np.array([[d+6*i+random() for d in range(n)] for i in range(2)])
+
+    verts=verts+list(set([f'a{c[0]}{c[1]}' for c in combinations(list(range(1,n+1)),2)])-set(verts))
 
     verts_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucker[1:])] for row in dummy_matrix ] )) for plucker in verts]
-    
+
+                                                                                              
   if user_input=='gras':
     print('Not yet implemented.')
     pass
@@ -126,3 +173,4 @@ def generate_quiver(user_input):
     verts=['x{0}'.format(i+1) for i in range(len(quiver))]
   
   return quiver,verts,mutables,verts_num
+
