@@ -1,15 +1,41 @@
 import numpy as np
 from sympy import simplify, Symbol
-from random import randint
 from random import random
-from math import isclose
 from sys import stdout
-from time import time, sleep
-from functions import same_cluster_test, overprint, mutation, quiver_mutations, coordinates, main, numerical_test
+from time import time
+from functions import overprint, main, numerical_test
 from quivers import generate_quiver
+from itertools import combinations
+from wedge import basis_of_CL2, expected_dimension_of_cln_gr2m
+import sys
+import pickle
+from menu import menu
+from wedge import mathematica_test
+
+mathematica_test()
+
+try:
+  file1=open('result_number.pk','x')
+  file1.close()
+except:
+  pass
+
+try:
+  file2=open('resultsdict.pk','x')
+  file2.close()
+except:
+  pass
+
+try:
+ file3=open('cl2_dictionary.pk','x')
+ file3.close()
+except:
+ pass
+
+
 
 #Background:
-cluster_info_dump='''This program is designed to find x-coordinates and a-coordinates of a cluster algebra. 
+cluster_info_dump='''This program is designed to find x-coordinates and a-coordinates of a cluster algebra. k
 
 A cluster algebra is generated combinatorially from a quiver, a directed graph with labeled vertices 1,..n that has no 1- or 2-cycles, together with a "cluster" or an n-tuple decorating the cluster (i.e., a=(a_1,...a_n) is a cluster with each a_i associated to vertex i). We call the pair of a quiver and cluster a seed. 
 
@@ -35,44 +61,53 @@ Here we consider quivers as nxn skew-symmetric matrices where the entries e_ij c
 
 Created by Etienne Phillips at the University of Maryland Pure and Applied Mathematics REU 2023 working under Dr. Christian Zickert.
 '''
-
-results_dictionary={'key':'value'}
-result_number=0
-
-#Defining gr(3,6) and codifying plucker relations
-
-gr_36_quiver=np.array(
-  [[0,1,1,-1,-1,0,0,0,0,0],
-   [-1,0,0,1,0,1,-1,0,0,0],
-   [-1,0,0,1,0,0,0,1,-1,0],
-   [1,-1,-1,0,0,0,1,0,1,-1],
-   [1,0,0,0,0,0,0,0,0,0],
-   [0,-1,0,0,0,0,0,0,0,0],
-   [0,1,0,-1,0,0,0,0,0,0],
-   [0,0,-1,0,0,0,0,0,0,0],
-   [0,0,1,-1,0,0,0,0,0,0],
-   [0,0,0,1,0,0,0,0,0,0] ]
-)
-gr_36_vertices=['a236','a235','a136','a356','a123','a234','a345','a126','a156','a456']
-
-gr_36_vertices_s=[Symbol(x) for x in gr_36_vertices]
-
-#This is the matrix from which the plucker relations will be evaluated
-#dummy_matrix=np.array([[1,2,3,4,5,6],[7,8,9,10,11,12],[13,14,16,17,18,19]])
-
-dummy_matrix=np.array([[n+6*i+random() for n in range(6)] for i in range(3)])
+a12=Symbol('a12')
+a13=Symbol('a13')
+a14=Symbol('a14')
+a15=Symbol('a15')
+a16=Symbol('a16')
+a26=Symbol('a26')
+a36=Symbol('a36')
+a46=Symbol('a46')
+a56=Symbol('a56')
+a23=Symbol('a23')
+a24=Symbol('a24')
+a25=Symbol('a25')
+a34=Symbol('a34')
+a35=Symbol('a34')
+a45=Symbol('a45')
 
 
-#These are the associated nubmers to each vertex as listed above
-gr_36_vertices_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucker[1:])] for row in dummy_matrix ] )) for plucker in gr_36_vertices]
+try: 
+  with open('result_number.pk','rb') as fi:
+    result_number= pickle.load(fi)
+    print(f'\nSuccessfully retrieved result_number: {result_number}.\n')
+except Exception as exc:
+  result_number=0
+  print('\nCould not retrieve result_number, setting result_number=0.\n')
+  print(exc)
 
+try:  
+  with open('resultsdict.pk','rb') as fi:
+    results_dictionary=pickle.load(fi)
+    print(f'\nSuccessfully loaded results_dictionary with {len(results_dictionary.keys())} results.\n')
+except Exception as exc:
+  results_dictionary={'x1x,gr26':({(a16*a34/(a13*a46), a14*a36/(a13*a46)), (a13*a46/(a16*a34), a14*a36/(a16*a34)), (a13*a45/(a15*a34), a14*a35/(a15*a34)), (a25*a34/(a23*a45), a24*a35/(a23*a45)), (a12*a45/(a15*a24), a14*a25/(a15*a24)), (a36*a45/(a34*a56), a35*a46/(a34*a56)), (a15*a24/(a12*a45), a14*a25/(a12*a45)), (a16*a45/(a14*a56), a15*a46/(a14*a56)), (a13*a56/(a16*a35), a15*a36/(a16*a35)), (a12*a46/(a16*a24), a14*a26/(a16*a24)), (a26*a34/(a23*a46), a24*a36/(a23*a46)), (a24*a56/(a26*a45), a25*a46/(a26*a45)), (a14*a56/(a16*a45), a15*a46/(a16*a45)), (a16*a23/(a12*a36), a13*a26/(a12*a36)), (a14*a23/(a12*a34), a13*a24/(a12*a34)), (a12*a35/(a15*a23), a13*a25/(a15*a23)), (a12*a34/(a14*a23), a13*a24/(a14*a23)), (a15*a23/(a12*a35), a13*a25/(a12*a35)), (a12*a36/(a16*a23), a13*a26/(a16*a23)), (a23*a46/(a26*a34), a24*a36/(a26*a34)), (a15*a34/(a13*a45), a14*a35/(a13*a45)), (a16*a25/(a12*a56), a15*a26/(a12*a56)), (a23*a45/(a25*a34), a24*a35/(a25*a34)), (a26*a35/(a23*a56), a25*a36/(a23*a56)), (a12*a56/(a16*a25), a15*a26/(a16*a25)), (a26*a45/(a24*a56), a25*a46/(a24*a56)), (a34*a56/(a36*a45), a35*a46/(a36*a45)), (a16*a35/(a13*a56), a15*a36/(a13*a56)), (a16*a24/(a12*a46), a14*a26/(a12*a46)), (a23*a56/(a26*a35), a25*a36/(a26*a35))},['a26', 'a25', 'a24', 'a23', 'a16', 'a56', 'a45', 'a34', 'a12', 'a36', 'a35', 'a14', 'a15', 'a46', 'a13'],{}), 'cl,gr26':({frozenset({a35, a56, a16, a34, a23, a45, a26, a25, a12}), frozenset({a24, a56, a34, a16, a23, a45, a26, a46, a12}), frozenset({a56, a34, a16, a23, a45, a46, a36, a12, a13}), frozenset({a56, a34, a16, a23, a45, a26, a46, a36, a12}), frozenset({a24, a56, a34, a16, a23, a45, a15, a14, a12}), frozenset({a24, a56, a34, a16, a23, a45, a26, a25, a12}), frozenset({a24, a56, a34, 
+a16, a23, a45, a25, a15, a12}), frozenset({a35, a56, a16, a34, a23, a45, a25, a15, a12}), frozenset({a35, a56, a16, a34, a23, a45, a15, a12, a13}), frozenset({a56, a34, a16, a23, a45, a46, a14, a12, a13}), frozenset({a35, a56, a16, a34, a23, a45, a26, a36, a12}), frozenset({a35, a56, a16, a34, a23, a45, a36, a12, a13}), frozenset({a24, a56, a34, a16, a23, a45, a46, a14, a12}), frozenset({a56, a34, a16, a23, a45, a15, a14, a12, a13})},['a26', 'a25', 'a24', 'a23', 'a16', 'a56', 'a45', 'a34', 'a12', 'a36', 'a35', 'a14', 'a15', 'a46', 'a13'],{})}
+  print('\nCould not retrieve results_dictionary, setting to default.\n')
+  print(exc)
 
-#Later, I'll make code that actually just generates this stuff in general.
+try: 
+  with open('cl2_dictionary.pk','rb') as fi:
+      cl2_dictionary= pickle.load(fi)
+      print(f'\nSuccessfully retrieved {len(cl2_dictionary)} saved bases of CL2.\nThe keys are: {cl2_dictionary.keys()}')
+except Exception as exc:
+  cl2_dictionary={}
+  print('\nCould not retrieve cl2_dictionary, setting empty dict.\n')
+  print(exc)
 
-#Live prints to console
+print('\n')
 
-
-# Below is the actual program
 
 
 
@@ -80,76 +115,46 @@ gr_36_vertices_num=[np.linalg.det(np.array([ [row[int(i)-1] for i in list(plucke
 # Main program code block #
 ###########################
 
-print('''This program works by doing some number of random mutations repeatedly for some number of iterations. The program can be interrupted during computations with keyboard interrupt to print the result so far.\n''') 
-while True:
-  print(f'''Please choose from the following options: \n 
+print('''This program works by doing some number of random mutations repeatedly for some number of iterations. The program can be interrupted during computations with keyboard interrupt to print the result so far.\n''')
+print(f'''Please choose from the following options: \n 
  info: returns information about this program and Cluster Algebras. \n
+ cln: to compute dimension of cln of a cluster algebra. \n
  co: to compute coordinates of a cluster algebra. \n
  qu: to find all quivers of a cluster algebra. \n
  keys: print all keys for saved results, enter a key to print associated result. \n
+ testdupes: enables the numeric test for duplicates, just "skip" will skip printing the erorr. \n
  debug: enter debug mode\n''')
-  option1=''
-  test_mode=False
-  skip_numeric_test_error=False
-  while option1 not in ['gr','qu']:
-    option1=input('Enter your choice: ')
-    if option1=='skip':
-      print('Ignoring numeric test error.')
-      skip_numeric_test_error=True
-    elif option1=='info':
-      print(cluster_info_dump)
-    elif option1=='debug':
-      test_mode=True
-      print('Test mode enabled.')
-    elif option1=='co':
-      option1='gr'
-    elif option1=='keys':
-      print(list(results_dictionary.keys()))
-      print()
-    elif option1 in results_dictionary.keys():
-      print(f'\nPrinting final result: "{option1}"\n')
-      print(results_dictionary[option1])
-      print()
-    else:
-      print('Invalid option, try again. \n')
-  
-  quiver_data_s=input('Enter the quiver to use.\n'+
- 'gr36 uses the quiver for gr(3,6) with plucker coordinate vertices.'+
-  '\ngr2n uses the quiver for gr(2,n) with plucker coordinate vertices.\n'+
-'ex2 uses the quiver 1->2 with default vertex labeling.\n'+
-'ex3 uses the quiver 1->2->3 with default vertex labeling.'+
-'\nEnter:')
-  quiver_data=generate_quiver(quiver_data_s)
-  
-  if option1=='gr':
-    find_coords=input('Enter "x" to find X-coords, "a" to find A-coords, or "cl" to find all the clusters: ')
-    if find_coords=="x":
-      do_find_x_coords=True
-      do_find_a_coords=False
-      do_find_clusters=False
-    elif find_coords=='a':
-      do_find_a_coords=True
-      do_find_x_coords=False
-      do_find_clusters=False
-    elif find_coords=="cl":
-      do_find_clusters=True
-      do_find_a_coords=False
-      do_find_x_coords=False
-    else:
-      do_find_clusters=False
-      do_find_a_coords=False
-      do_find_x_coords=False
-  else:
-    do_find_a_coords=False
-    do_find_x_coords=False
-    do_find_clusters=False
-  
-  num_of_mutations=int(input('Enter the number of random mutations (not recommended to be larger than 20): '))
-  iteration_limit=input('Enter the iteration limit or leave blank or enter 0 to iterate forever: ')
-  
+while True:
+
+  menus=menu(cluster_info_dump,results_dictionary,cl2_dictionary)
+  do_find_x_coords=menus[0]
+  do_find_a_coords=menus[1]
+  do_find_clusters=menus[3]
+  do_find_x1x=menus[2]
+
+  skip_input_1=menus[7]
+  skip_input_2=menus[8]
+  skip_input_3=menus[9]
 
 
+  option1=menus[12]
+  test_mode=menus[4]
+  skip_numeric_test_error=menus[6]
+  test_dupes=menus[5]
+
+
+  m=menus[11]
+
+  muted=menus[10]
+
+  num_of_mutations=menus[13]
+  quiver_data=menus[14]
+  quiver_data_s=menus[15]
   
+  find_coords=menus[16]
+
+  iteration_limit=menus[17]
+
   if iteration_limit=='':
     iteration_limit=0
   iteration_limit=int(iteration_limit)
@@ -160,12 +165,27 @@ while True:
   
   final_result=set()
   iteration=0
+
+  new_coordinate_number=1
   
   try:
+    if muted:
+      print('Computing X-coordinates...')
+    #overprint(f'iteration: {iteration} / {iteration_limit}')
     last_coordinates_found=1
+    empty_iterations=0
+    
+    
+    if skip_input_3:
+      quiver_data_s=f'gr2{m}'
+      quiver_data=generate_quiver(quiver_data_s)
+      m+=1
     
     while keep_looping==True:
       iteration+=1
+
+      if last_coordinates_found==0:
+        empty_iterations+=1
       
       if test_mode==True:
         print('\nGeneral test mode output...')
@@ -179,7 +199,14 @@ while True:
       
       ####################### 
       #Actually calling main#
-      new_results=main(option1,num_of_mutations,[quiver_data[0].copy(),quiver_data[1].copy(),quiver_data[2],quiver_data[3].copy()],do_find_x_coords,do_find_a_coords,do_find_clusters,test_mode)
+      new_results=main(option1,num_of_mutations,[quiver_data[0].copy(),quiver_data[1].copy(),quiver_data[2],quiver_data[3].copy()],do_find_x_coords,do_find_a_coords,do_find_clusters,do_find_x1x,new_coordinate_number,test_mode,muted)
+
+      quiver_data=list(quiver_data)      
+      quiver_data[1]=new_results[2]
+      quiver_data[3]=new_results[3]
+      quiver_data=tuple(quiver_data)
+      
+      new_coordinate_number=new_results[1]
       
       old_length=len(final_result)
 
@@ -187,26 +214,38 @@ while True:
       #To prevent infinite runtime after all coordinates are found.
       if last_coordinates_found>0:
         total_duplicates=0
+        empty_iterations=0
       
-      for co in new_results:
+      for co in new_results[0]:
         final_result.add(co)
       
       if option1=='gr':
         #Numeric test for equality modulo plucker relations
-        temp_object=numerical_test(iteration,quiver_data,final_result,do_find_clusters,0,old_length,skip_numeric_test_error,find_coords,keep_looping)
-        final_result=temp_object[0]
-        last_coordinates_found=temp_object[1]
-        keep_looping=temp_object[2]
-        
+        if test_dupes==True:
+          temp_object=numerical_test(iteration,quiver_data,final_result,do_find_clusters,0,old_length,skip_numeric_test_error,find_coords,keep_looping)
+          final_result=temp_object[0]
+          last_coordinates_found=temp_object[1]
+          keep_looping=temp_object[2]
+        else:
+          if muted==False:
+            overprint(f'{iteration}: Found {-old_length+len(final_result)} new {find_coords.capitalize()}-coordinates. Total: {len(final_result)}\n')
+
+          last_coordinates_found= len(final_result)-old_length
         
           
       if option1=='qu':
         overprint(f'\n{1}: Found {len(final_result)} total quivers.\n')
 
       #Stops program if too many consecutive duplicates are found.
-      if last_coordinates_found==0 and total_duplicates>50:
+      if last_coordinates_found==0 and total_duplicates>50 and muted==False:
         overprint(f'\nFound {total_duplicates}/500 consecutive duplicates. \n\n')
         if total_duplicates>=500:
+          print('Stopping...')
+          raise KeyboardInterrupt
+
+      if last_coordinates_found==0 and empty_iterations>10 and muted==False:
+        overprint(f'\nCompleted {empty_iterations}/{len(final_result)//2} consecutive empty iterations. \n\n')
+        if empty_iterations>=len(final_result)//2:
           print('Stopping...')
           raise KeyboardInterrupt
       
@@ -253,34 +292,34 @@ while True:
           final_result=set(final_result) 
           print(final_result)
           stdout.write('\r'+' '*20)
-  ###
+
+
+  ######################################################
 
 
   result_number+=1
-  new_result_key=f'{find_coords}'+f'{result_number}'
-  results_dictionary[new_result_key]=final_result
+  new_result_key=f'{find_coords},'+f'{quiver_data_s},'+f'{result_number}'
+  results_dictionary[new_result_key]=(final_result,new_results[2],new_results[4])
+
+  if not skip_input_1:
+    print('\n\nResult: \n', final_result, f'\n\nNew variables: {new_results[4],len(new_results[4])}', f'\n\nFinal result key: {new_result_key} \n\nNumber found: {len(final_result)}')
+    print('\nTotal computation time: ', time()-universal_start_time)
+    print('\n Running again.')
+
+    if input('Enter "s" to save result: ')=='s':
+      with open('resultsdict.pk','wb') as fi1:
+        pickle.dump(results_dictionary,fi1)
+
+      with open('result_number.pk','wb') as fi2:
+        pickle.dump(result_number,fi2)
+
+  else:
+    display_result=list(final_result)
+    print('Computing CL2...\n')
+    basis_and_dim=basis_of_CL2(display_result,quiver_data[1])  
+    print(f'Computed dimension of CL2({quiver_data_s}): ', basis_and_dim[1])
+    print('Expected dimension: ',expected_dimension_of_cln_gr2m(2,m-1))
+    print('\n')
+    option1='gr'
+
   
-  print('\n\nResult: \n', final_result, f'\n Final result key:{new_result_key} \nNumber found: {len(final_result)}')
-  print('\nTotal computation time: ', time()-universal_start_time)
-  
-  
-  
-  
-  if option1=='qu':
-    if test_mode==True:
-      test='Passed'
-      print('Test skew-symmetry: ')
-      e=set()
-      for x in final_result:
-        x=list(list(t) for t in x)
-        y=x.pop(-1)
-        x=np.asarray(x[0])
-        skewtranspose=-np.transpose(x)
-        comparison=x==skewtranspose
-        if not comparison.any():
-          print(False)
-          test='Failed'
-        print(x,'\n','Mutations: ',y)
-      print('\n',test)
-  
-  print('\n Running again.')
