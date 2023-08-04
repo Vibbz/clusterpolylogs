@@ -1,6 +1,6 @@
 from quivers import generate_quiver
 from wedge import basis_of_CL2
-from wedge import cl_intb_map, basis_of_CLn,expected_dimension_of_cln_gr2m
+from wedge import cl_intb_map, basis_of_CLn,expected_dimension_of_cln_gr2m, new_basis_CLn
 import pickle
 
 def menu(info,results,cl2_dictionary):
@@ -31,8 +31,10 @@ def menu(info,results,cl2_dictionary):
   while option1 not in ['gr','qu']:
     option1=input('(Main menu) Enter your choice: ')
     if option1=='t':
-      print('Resulintg NS dim: ', basis_of_CLn(results['cl,gr24,13'][0],results['cl,gr24,13'][1],cl2_dictionary['x1x,gr24,7'])[1])
-      print('Expected: ', expected_dimension_of_cln_gr2m(3,4))
+      print('Resulintg NS dim: ', new_basis_CLn(results['cl,gr25,15'][0],results['cl,gr25,15'][1],cl2_dictionary['x1x,gr25,8']))
+      #print('Resulintg NS dim: ', basis_of_CLn(results['cl,gr24,13'][0],results['cl,gr24,13'][1],cl2_dictionary['x1x,gr24,7'])[1])
+      print('Expected: ', expected_dimension_of_cln_gr2m(3,5))
+    
     elif option1=='cl':
       print(cl2_dictionary[input('Input key to retrieve basis for cl2: ')])
     elif option1=='skip':

@@ -174,3 +174,5 @@ def generate_quiver(user_input):
   
   return quiver,verts,mutables,verts_num
 
+
+#print(grassmannian_vertex_indices(1,1,2,2,4))

@@ -116,14 +116,12 @@ print('\n')
 ###########################
 
 print('''This program works by doing some number of random mutations repeatedly for some number of iterations. The program can be interrupted during computations with keyboard interrupt to print the result so far.\n''')
+print('NOTE: Having Mathematica installed is reqiured for some features to work properly.')
 print(f'''Please choose from the following options: \n 
  info: returns information about this program and Cluster Algebras. \n
- cln: to compute dimension of cln of a cluster algebra. \n
- co: to compute coordinates of a cluster algebra. \n
+ co: to compute coordinates or clusters of a cluster algebra. \n
  qu: to find all quivers of a cluster algebra. \n
- keys: print all keys for saved results, enter a key to print associated result. \n
- testdupes: enables the numeric test for duplicates, just "skip" will skip printing the erorr. \n
- debug: enter debug mode\n''')
+ keys: print all keys for saved results, enter a key to print associated result. \n''')
 while True:
 
   menus=menu(cluster_info_dump,results_dictionary,cl2_dictionary)
